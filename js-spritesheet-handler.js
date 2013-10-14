@@ -19,7 +19,7 @@ var SpritesheetHandler = function(id, container) {
 	this.version = "0.1b"
 	this.id = id;
 	this.container = container;
-	this.defaultFPS = 12;
+	this.defaultFPS = 7;
 	this.internalStates = ["unloaded", "stopped", "running"];
 	this.internalState = 0;
 	this.states = {};
@@ -30,7 +30,7 @@ var SpritesheetHandler = function(id, container) {
 	this.currentState = null;
 	this.currentRepeat = 0;
 	this.nextStates = [];
-	this.frames = [];
+	this.maxFrame = 0;
 	this.currentFrame = 0;	
 	this.currentFPS = this.defaultFPS;
 }
@@ -45,22 +45,29 @@ SpritesheetHandler.prototype.addState = function(state, isdefault){
 	if(isdefault) this.defaultState = state.id;
 }
 SpritesheetHandler.prototype.changeState = function(state_id, repeat){
+	if(state_id==this.currentState) return;
+	clearInterval(this.interv);	
 	this.currentState = state_id;
 	
-	var s = states[state_id]
+	var s = this.states[state_id]
 	this.currentFPS = s.fps;
-	var qtframes = s.endFrame - s.startFrame;
+	if(!s.fps) this.currentFPS = this.defaultFPS;
+	this.maxFrame = s.endFrame;
+	this.currentFrame = s.startFrame-1;
+	this.currentRepeat = repeat;
+	this.internalRate = 1000 / this.currentFPS;
+	var d = this;
+	this.interv = setInterval(function(){ d.nextFrame() }, this.internalRate)
 	// TODO: parei aqui
 
-	
-
-	this.currentFrame = -1;
 	if (this.container.find('.inner').length === 0) {
 		// TODO: estava pegando daqui: https://bitbucket.org/heinencreative/flash-cs6-sprite-sheet-animator
-        this.container.append('<div class="inner"></div>');
-    }
+        	this.container.append('<div class="inner"></div>');
+    	}
+	//this.currentFrame = -1;
 	this.nextFrame();
 }
+
 /*
 	Enqueues states to be dispatched sequentially after current state ends
 */
@@ -71,10 +78,12 @@ SpritesheetHandler.prototype.queueState = function(state_id, repeat){
 
 SpritesheetHandler.prototype.nextFrame = function(){
 	this.currentFrame++;
-	if(this.currentFrame>=this.frames.length){
+	if(this.currentFrame>this.maxFrame){
 		switch(true){
 			case (this.currentRepeat < 0):
-				this.changeState(this.currentState, -1)
+				//this.changeState(this.currentState, -1)
+				this.currentFrame = this.states[this.currentState].startFrame;
+				this.processFrame()
 				break;
 			case (this.currentRepeat == 0):
 				if(this.nextStates.length>0) {
@@ -85,8 +94,11 @@ SpritesheetHandler.prototype.nextFrame = function(){
 				}
 				break;
 			case (this.currentRepeat > 0):
+				this.currentFrame = this.states[this.currentState].startFrame;
+				this.processFrame()
+				//this.changeState(this.defaultState, this.currentRepeat-1);				
 				break;
-				this.changeState(this.defaultState, this.currentRepeat-1);
+				
 		}
 	} else {
 		this.processFrame()
@@ -94,8 +106,8 @@ SpritesheetHandler.prototype.nextFrame = function(){
 }
 
 SpritesheetHandler.prototype.processFrame = function(){
-	var state = this.states(this.currentState);
-	var current = state.data.frames[frameCount];
+	var state = this.states[this.currentState];
+	var current = state.data.frames[this.currentFrame];
 	// Set container to max dimensions needed to contain animation
     
     this.container.css({

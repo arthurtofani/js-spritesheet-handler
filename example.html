@@ -2,7 +2,7 @@
 <html lang="en">
 	<head>
 		<meta charset="utf-8" />
-		<title>Smashing HTML5!</title>
+		<title>js-spritesheet-handler example</title>
 	</head>
  
 	<body>
@@ -25,9 +25,13 @@
 	
 			var character1 = new SpritesheetHandler("character1", $("#character1"));
 			var stopState = new SpritesheetHandlerState("stop", 0, 0, spritesheet1, "data/spritesheet.png")
-			var walkState = new SpritesheetHandlerState("walk", 0, 8, spritesheet1, "data/spritesheet.png")
+			var walkState = new SpritesheetHandlerState("walk", 1, 7, spritesheet1, "data/spritesheet.png")
+			var xState = new SpritesheetHandlerState("x", 9, 18, spritesheet1, "data/spritesheet.png")
+			var yState = new SpritesheetHandlerState("y", 20, 28, spritesheet1, "data/spritesheet.png")			
 			character1.addState(stopState, true);
 			character1.addState(walkState);
+			character1.addState(xState);
+			character1.addState(yState);
 
 
 
