@@ -1,4 +1,10 @@
 js-spritesheet-handler
-======================
+============
 
-Handler for spritesheet including different animation states. These states may come from different spritesheet files and may receive different FPS rate. 
+A tool for handling javascript spritesheets. You can associate to a jQuery element different animation states from the same or from different spritesheet files. You can switch between diferent states and set them different FPS rates.
+
+This software isn't functional yet. 
+
+
+**requirements:**
+jQuery 1.8.2+

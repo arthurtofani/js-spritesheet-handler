@@ -290,7 +290,7 @@ to attach them to the start of each source file to most effectively
 convey the exclusion of warranty; and each file should have at least
 the "copyright" line and a pointer to where the full notice is found.
 
-    Handler for spritesheet including different animation states. These states may come from different spritesheet files and may receive different FPS rate. 
+    Drag and Drop tool for Javascript which deals with scale transforms
     Copyright (C) 2013  Arthur Tofani
 
     This program is free software; you can redistribute it and/or modify
