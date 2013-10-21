@@ -29,6 +29,7 @@ var SpritesheetHandler = function(id, container) {
 	this.defaultState = null; // always in loop (repeat == -1)	
 	this.currentState = null;
 	this.currentRepeat = 0;
+	this.currentCallback;
 	this.nextStates = [];
 	this.maxFrame = 0;
 	this.currentFrame = 0;	
@@ -46,7 +47,7 @@ SpritesheetHandler.prototype.addState = function(state, isdefault){
 	return this;
 };
 
-SpritesheetHandler.prototype.changeState = function(state_id, repeat){
+SpritesheetHandler.prototype.changeState = function(state_id, repeat, callback){
 	if(state_id==this.currentState) return;
 	clearInterval(this.interv);	
 	this.currentState = state_id;
@@ -57,6 +58,7 @@ SpritesheetHandler.prototype.changeState = function(state_id, repeat){
 	this.maxFrame = s.endFrame;
 	this.currentFrame = s.startFrame-1;
 	this.currentRepeat = repeat;
+	this.currentCallback = callback;
 	this.internalRate = 1000 / this.currentFPS;
 	var d = this;
 	this.interv = setInterval(function(){ d.nextFrame(); }, this.internalRate);
@@ -79,6 +81,15 @@ SpritesheetHandler.prototype.queueState = function(state_id, repeat){
 	this.nextStates.push([state_id, repeat]);
 };
 
+/*
+	Repeat rules:
+	repeat < 0 							---> infinite loop
+	repeat == 0 || undefined || null 	---> plays once and stop at last frame
+	repeat > 0							---> repeats n times and goes back to default state
+	
+	Callback rules:
+	to use a callback you need repeat >= 1
+*/
 SpritesheetHandler.prototype.nextFrame = function(){
 	this.currentFrame++;
 	if(this.currentFrame>this.maxFrame){
@@ -88,15 +99,17 @@ SpritesheetHandler.prototype.nextFrame = function(){
 				this.currentFrame = this.states[this.currentState].startFrame;
 				this.processFrame();
 				break;
-			case (this.currentRepeat == 0):
+			case (this.currentRepeat == 1): //case (this.currentRepeat == 0):
 				if(this.nextStates.length>0) {
 					var s = nextStates.shift;
 					this.changeState(s[0], s[1]);
 				} else {
+					if (this.currentCallback) this.currentCallback();
 					this.changeState(this.defaultState, -1);
 				}
 				break;
-			case (this.currentRepeat > 0):
+			case (this.currentRepeat > 1): //case (this.currentRepeat > 0):
+				this.currentRepeat --;
 				this.currentFrame = this.states[this.currentState].startFrame;
 				this.processFrame();
 				//this.changeState(this.defaultState, this.currentRepeat-1);				
