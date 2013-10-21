@@ -16,10 +16,10 @@
 			  pngfile: a spritesheet png from flash spritesheet export (trim option may be activated)
 */
 var SpritesheetHandler = function(id, container) {
-	this.version = "0.1b"
+	this.version = "0.1c";
 	this.id = id;
 	this.container = container;
-	this.defaultFPS = 7;
+	this.defaultFPS = 24;
 	this.internalStates = ["unloaded", "stopped", "running"];
 	this.internalState = 0;
 	this.states = {};
@@ -33,7 +33,7 @@ var SpritesheetHandler = function(id, container) {
 	this.maxFrame = 0;
 	this.currentFrame = 0;	
 	this.currentFPS = this.defaultFPS;
-}
+};
 
 
 /*
@@ -42,14 +42,16 @@ var SpritesheetHandler = function(id, container) {
 SpritesheetHandler.prototype.addState = function(state, isdefault){
 	state.handler = this;
 	this.states[state.id] = state;
-	if(isdefault) this.defaultState = state.id;
-}
+	if(isdefault) this.defaultState = state.id;	
+	return this;
+};
+
 SpritesheetHandler.prototype.changeState = function(state_id, repeat){
 	if(state_id==this.currentState) return;
 	clearInterval(this.interv);	
 	this.currentState = state_id;
 	
-	var s = this.states[state_id]
+	var s = this.states[state_id];
 	this.currentFPS = s.fps;
 	if(!s.fps) this.currentFPS = this.defaultFPS;
 	this.maxFrame = s.endFrame;
@@ -57,7 +59,7 @@ SpritesheetHandler.prototype.changeState = function(state_id, repeat){
 	this.currentRepeat = repeat;
 	this.internalRate = 1000 / this.currentFPS;
 	var d = this;
-	this.interv = setInterval(function(){ d.nextFrame() }, this.internalRate)
+	this.interv = setInterval(function(){ d.nextFrame(); }, this.internalRate);
 	// TODO: parei aqui
 
 	if (this.container.find('.inner').length === 0) {
@@ -66,15 +68,16 @@ SpritesheetHandler.prototype.changeState = function(state_id, repeat){
     	}
 	//this.currentFrame = -1;
 	this.nextFrame();
-}
+	return this;
+};
 
 /*
 	Enqueues states to be dispatched sequentially after current state ends
 */
 SpritesheetHandler.prototype.queueState = function(state_id, repeat){
 	if(!this.states[state_id]) return;
-	this.nextStates.push([state_id, repeat])
-}
+	this.nextStates.push([state_id, repeat]);
+};
 
 SpritesheetHandler.prototype.nextFrame = function(){
 	this.currentFrame++;
@@ -83,7 +86,7 @@ SpritesheetHandler.prototype.nextFrame = function(){
 			case (this.currentRepeat < 0):
 				//this.changeState(this.currentState, -1)
 				this.currentFrame = this.states[this.currentState].startFrame;
-				this.processFrame()
+				this.processFrame();
 				break;
 			case (this.currentRepeat == 0):
 				if(this.nextStates.length>0) {
@@ -95,15 +98,15 @@ SpritesheetHandler.prototype.nextFrame = function(){
 				break;
 			case (this.currentRepeat > 0):
 				this.currentFrame = this.states[this.currentState].startFrame;
-				this.processFrame()
+				this.processFrame();
 				//this.changeState(this.defaultState, this.currentRepeat-1);				
 				break;
 				
 		}
 	} else {
-		this.processFrame()
+		this.processFrame();
 	}
-}
+};
 
 SpritesheetHandler.prototype.processFrame = function(){
 	var state = this.states[this.currentState];
@@ -118,13 +121,11 @@ SpritesheetHandler.prototype.processFrame = function(){
 	this.container.find('.inner').css({
         position: 'absolute',
         background: 'url('+ state.img +')',
-        width: current.frame.w+'px',
-        height: current.frame.h+'px',
-        backgroundPosition: '-'+current.frame.x+'px -'+current.frame.y+'px',
-        top: current.spriteSourceSize.y,
-        left: current.spriteSourceSize.x
-    });    
-}
+        width: current.frame.w +'px',
+        height: current.frame.h +'px',
+        backgroundPosition: '-'+current.frame.x+'px -'+current.frame.y+'px'
+    }); 
+};
 
 var SpritesheetHandlerState = function(id, startFrame, endFrame, data, img) {
 	this.id = id;
@@ -133,16 +134,17 @@ var SpritesheetHandlerState = function(id, startFrame, endFrame, data, img) {
 	this.startFrame = startFrame;
 	this.endFrame = endFrame;
 	this.fps = null;
-}
+};
+
 // changes Frame Per Second rate.
 SpritesheetHandlerState.prototype.setFPS = function(newfps){
 	//reconstructs the frameOrder array	
 	this.fps = newfps;
 	return this;
-}
+};
 
 // how many seconds it takes to play all the frames. it changes FPS.
 SpritesheetHandlerState.prototype.inSeconds = function(seconds){
 	//calculates new fps and calls setFPS()	
 	return this;
-}
+};
