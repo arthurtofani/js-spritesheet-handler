@@ -29,7 +29,7 @@ var SpritesheetHandler = function(id, container) {
 	this.defaultState = null; // always in loop (repeat == -1)	
 	this.currentState = null;
 	this.currentRepeat = 0;
-	this.currentCallback;
+	this.callbacks = {};
 	this.nextStates = [];
 	this.maxFrame = 0;
 	this.currentFrame = 0;	
@@ -43,12 +43,16 @@ var SpritesheetHandler = function(id, container) {
 SpritesheetHandler.prototype.addState = function(state, isdefault){
 	state.handler = this;
 	this.states[state.id] = state;
+	this.callbacks[state.id] = [];
 	if(isdefault) this.defaultState = state.id;	
 	return this;
 };
 
 SpritesheetHandler.prototype.changeState = function(state_id, repeat, callback){
 	if(state_id==this.currentState) return;
+	
+	repeat = repeat || 1;
+	
 	clearInterval(this.interv);	
 	this.currentState = state_id;
 	
@@ -58,7 +62,7 @@ SpritesheetHandler.prototype.changeState = function(state_id, repeat, callback){
 	this.maxFrame = s.endFrame;
 	this.currentFrame = s.startFrame-1;
 	this.currentRepeat = repeat;
-	this.currentCallback = callback;
+	this.callbacks[state_id].push(callback);
 	this.internalRate = 1000 / this.currentFPS;
 	var d = this;
 	this.interv = setInterval(function(){ d.nextFrame(); }, this.internalRate);
@@ -66,8 +70,9 @@ SpritesheetHandler.prototype.changeState = function(state_id, repeat, callback){
 
 	if (this.container.find('.inner').length === 0) {
 		// TODO: estava pegando daqui: https://bitbucket.org/heinencreative/flash-cs6-sprite-sheet-animator
-        	this.container.append('<div class="inner"></div>');
-    	}
+        this.container.append('<div class="inner"></div>');
+    }
+    
 	//this.currentFrame = -1;
 	this.nextFrame();
 	return this;
@@ -76,45 +81,43 @@ SpritesheetHandler.prototype.changeState = function(state_id, repeat, callback){
 /*
 	Enqueues states to be dispatched sequentially after current state ends
 */
-SpritesheetHandler.prototype.queueState = function(state_id, repeat){
+SpritesheetHandler.prototype.queueState = function(state_id, repeat, callback){
 	if(!this.states[state_id]) return;
-	this.nextStates.push([state_id, repeat]);
+	this.nextStates.push([state_id, repeat, callback]);
+	return this;
 };
 
 /*
 	Repeat rules:
-	repeat < 0 							---> infinite loop
-	repeat == 0 || undefined || null 	---> plays once and stop at last frame
-	repeat > 0							---> repeats n times and goes back to default state
-	
-	Callback rules:
-	to use a callback you need repeat >= 1
+	repeat <= 0 	---> infinite loop
+	repeat > 0		---> repeats n times and goes back to default state
 */
 SpritesheetHandler.prototype.nextFrame = function(){
 	this.currentFrame++;
 	if(this.currentFrame>this.maxFrame){
 		switch(true){
-			case (this.currentRepeat < 0):
-				//this.changeState(this.currentState, -1)
+			case (this.currentRepeat <= 0):
 				this.currentFrame = this.states[this.currentState].startFrame;
 				this.processFrame();
 				break;
-			case (this.currentRepeat == 1): //case (this.currentRepeat == 0):
-				if(this.nextStates.length>0) {
-					var s = nextStates.shift;
-					this.changeState(s[0], s[1]);
+			case (this.currentRepeat == 1):				
+				var cb = this.callbacks[this.currentState].shift();
+				if (cb) cb();
+				if(this.nextStates.length > 0) {
+					var s = this.nextStates.shift();
+					if (this.currentState == s[0]){
+						this.currentState = "";
+					}
+					this.changeState(s[0], s[1], s[2]);
 				} else {
-					if (this.currentCallback) this.currentCallback();
-					this.changeState(this.defaultState, -1);
+					this.changeState(this.defaultState, 1);
 				}
 				break;
-			case (this.currentRepeat > 1): //case (this.currentRepeat > 0):
+			case (this.currentRepeat > 1):
 				this.currentRepeat --;
 				this.currentFrame = this.states[this.currentState].startFrame;
-				this.processFrame();
-				//this.changeState(this.defaultState, this.currentRepeat-1);				
+				this.processFrame();			
 				break;
-				
 		}
 	} else {
 		this.processFrame();
@@ -127,7 +130,7 @@ SpritesheetHandler.prototype.processFrame = function(){
 	// Set container to max dimensions needed to contain animation
     
     this.container.css({
-        position: 'absolute', // default was relative, but changed for Eliza Corp
+        position: 'absolute',
         width: current.sourceSize.w,
         height: current.sourceSize.h
     });
