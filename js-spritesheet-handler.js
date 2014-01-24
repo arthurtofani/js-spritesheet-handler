@@ -34,9 +34,8 @@ var SpritesheetHandler = function(id, container) {
 	this.maxFrame = 0;
 	this.currentFrame = 0;	
 	this.currentFPS = this.defaultFPS;
-	
-	if (this.container.find('.inner').length === 0)this.container.append('<div class="inner"></div>');
 };
+
 
 /*
 	Adds a new state to the character
@@ -46,20 +45,13 @@ SpritesheetHandler.prototype.addState = function(state, isdefault){
 	this.states[state.id] = state;
 	this.callbacks[state.id] = [];
 	if(isdefault) this.defaultState = state.id;	
-	
 	return this;
 };
 
-SpritesheetHandler.prototype.changeState = function(state_id, repeat, callback, clearQueue){
-	if(state_id==this.currentState) return this;
+SpritesheetHandler.prototype.changeState = function(state_id, repeat, callback){
+	if(state_id==this.currentState) return;
 	
-	clearQueue = (typeof(clearQueue)==='undefined') ? true : clearQueue;
 	repeat = repeat || 1;
-	
-	if(clearQueue) {
-		this.nextStates = [];
-		for (key in this.callbacks){ this.callbacks[key] = [] }
-	}	
 	
 	clearInterval(this.interv);	
 	this.currentState = state_id;
@@ -68,35 +60,21 @@ SpritesheetHandler.prototype.changeState = function(state_id, repeat, callback, 
 	this.currentFPS = s.fps;
 	if(!s.fps) this.currentFPS = this.defaultFPS;
 	this.maxFrame = s.endFrame;
-	this.currentFrame = s.startFrame;
+	this.currentFrame = s.startFrame-1;
 	this.currentRepeat = repeat;
 	this.callbacks[state_id].push(callback);
 	this.internalRate = 1000 / this.currentFPS;
 	var d = this;
-
-	var current = s.data.frames[this.currentFrame];
-	if(!current){
-		console.log("It looks lika that the file you have exported isn't in the right format. Make sure to exportit as JSON-Array.");
-	}
-	this.container.css({
-        position: 'absolute',
-        width: current.sourceSize.w,
-        height: current.sourceSize.h
-    });
-
-    if (this.container.find('.inner').css('background-image').search(s.img) < 0){
-		this.container.find('.inner').css({
-			position: 'absolute',
-			background: 'url('+ s.img +')',
-		}); 
-	}
-	
-	this.container.find('.inner').css({
-        backgroundPosition: '-'+current.frame.x+'px -'+current.frame.y+'px'
-    }); 
-	
 	this.interv = setInterval(function(){ d.nextFrame(); }, this.internalRate);
-	this.nextFrame();	
+	// TODO: parei aqui
+
+	if (this.container.find('.inner').length === 0) {
+		// TODO: estava pegando daqui: https://bitbucket.org/heinencreative/flash-cs6-sprite-sheet-animator
+        this.container.append('<div class="inner"></div>');
+    }
+    
+	//this.currentFrame = -1;
+	this.nextFrame();
 	return this;
 };
 
@@ -104,7 +82,7 @@ SpritesheetHandler.prototype.changeState = function(state_id, repeat, callback, 
 	Enqueues states to be dispatched sequentially after current state ends
 */
 SpritesheetHandler.prototype.queueState = function(state_id, repeat, callback){
-	if(!this.states[state_id]) return this;	
+	if(!this.states[state_id]) return;
 	this.nextStates.push([state_id, repeat, callback]);
 	return this;
 };
@@ -115,7 +93,7 @@ SpritesheetHandler.prototype.queueState = function(state_id, repeat, callback){
 	repeat > 0		---> repeats n times and goes back to default state
 */
 SpritesheetHandler.prototype.nextFrame = function(){
-	
+	this.currentFrame++;
 	if(this.currentFrame>this.maxFrame){
 		switch(true){
 			case (this.currentRepeat <= 0):
@@ -130,7 +108,7 @@ SpritesheetHandler.prototype.nextFrame = function(){
 					if (this.currentState == s[0]){
 						this.currentState = "";
 					}
-					this.changeState(s[0], s[1], s[2], false);
+					this.changeState(s[0], s[1], s[2]);
 				} else {
 					this.changeState(this.defaultState, 1);
 				}
@@ -157,21 +135,37 @@ SpritesheetHandler.prototype.processFrame = function(){
         height: current.sourceSize.h
     });
 	this.container.find('.inner').css({
+        position: 'absolute',
+        background: 'url('+ state.img +')',
         width: current.frame.w +'px',
         height: current.frame.h +'px',
         backgroundPosition: '-'+current.frame.x+'px -'+current.frame.y+'px'
-    });
-    this.currentFrame++;
+    }); 
 };
 
 var SpritesheetHandlerState = function(id, startFrame, endFrame, data, img) {
 	this.id = id;
 	this.img = img;
-	this.data = data;
+	this.data = this.getJSONFile(data);
 	this.startFrame = startFrame;
 	this.endFrame = endFrame;
 	this.fps = null;
+
 };
+
+SpritesheetHandlerState.prototype.getJSONFile = function(data){
+	if(typeof data === "object")
+		return data;
+	else if(typeof data === "string"){
+		var request = new XMLHttpRequest();
+		request.open('GET',data,false);
+		request.send(null);
+		if(request.status === 200)
+			return JSON.parse(request.responseText);	
+		else
+			throw "Spritesheet Handler State: 'Arquivo JSON não encontrado'";		
+	}
+}
 
 // changes Frame Per Second rate.
 SpritesheetHandlerState.prototype.setFPS = function(newfps){
